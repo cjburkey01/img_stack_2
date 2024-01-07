@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>ImgStack2</title>
+
+        <style>
+            html, body {
+                padding: 0;
+                margin: 0;
+                height: 100%;
+            }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            #content {
+                flex-grow: 1;
+            }
+
+            footer {
+                flex-shrink: 0;
+                padding: 1rem;
+                background-color: #EEEEEE;
+            }
+
+            footer a {
+                color: #5555FF;
+                text-decoration: none;
+            }
+
+            footer a:hover {
+                color: #0505CC;
+                text-decoration: underline;
+            }
+
+            .container {
+                width: 20rem;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            @media (min-width: 50rem) {
+                .container {
+                    width: 40rem;
+                }
+            }
+
+            @media (min-width: 80rem) {
+                .container {
+                    width: 60rem;
+                }
+            }
+
+            #options_box {
+                display: grid;
+                grid-template-columns: auto auto;
+                align-items: center;
+                border: 1px solid black;
+                padding: 1rem;
+                gap: 0.75rem;
+            }
+
+            #options_box > label {
+                justify-self: end;
+                padding: 0.5rem;
+            }
+
+            #btn_combine {
+                grid-column: 1 / span 2;
+                justify-self: stretch;
+            }
+
+            /*noinspection CssUnusedSymbol*/
+            #image_list > .image_row {
+                display: flex;
+                flex-direction: row;
+                gap: 0.5rem;
+            }
+
+            #image_list {
+                grid-column: 1 / span 2;
+                justify-self: center;
+            }
+
+            .image_row > button {
+                align-self: center;
+                flex-shrink: 0;
+                font-size: 200%;
+            }
+
+            /*noinspection CssUnusedSymbol*/
+            .image_row > .img_wrapper {
+                flex-grow: 1;
+            }
+
+            .img_wrapper > img {
+                max-width: 100%;
+                max-height: 20rem;
+                object-fit: contain;
+                border: 1px solid #DDDDDD;
+            }
+
+            #image_output {
+                grid-column: 1 / span 2;
+                justify-self: stretch;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="content">
+            <div class="container">
+                <h1>Hello</h1>
+                <div id="options_box">
+                    <label for="file_select">Select:</label>
+                    <input type="file" id="file_select" accept="image/*" multiple _="on change call select_images(me)">
+
+                    <label for="size_select">Sizing:</label>
+                    <div id="size_select">
+                        <input type="radio" name="size_select" id="size_larger" checked/>
+                        <label for="size_larger">Size to largest</label>
+                        <br>
+                        <input type="radio" name="size_select" id="size_smaller"/>
+                        <label for="size_smaller">Size to smallest</label>
+                    </div>
+
+                    <label for="direction_select">Direction:</label>
+                    <div id="direction_select">
+                        <input type="radio" name="direction_select" id="direction_vert" checked/>
+                        <label for="direction_vert">Vertical</label>
+                        <br>
+                        <input type="radio" name="direction_select" id="direction_horiz"/>
+                        <label for="direction_horiz">Horizontal</label>
+                    </div>
+
+                    <button id="btn_combine" _="on click send perform_combine to <body/> add @disabled to me">Combine!</button>
+
+                    <div id="image_list"></div>
+
+                    <div id="image_output">
+                        <div class="img_wrapper"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer>
+            <div class="container">
+                &copy; 2024
+                <a href="https://cjburkey.com" target="_blank" title="CJ's Website">CJ Burkey</a>
+                <br>
+                <a href="https://github.com/cjburkey01/img_stack_2" target="_blank" title="Link to this page's source code on GitHub">GitHub</a>
+            </div>
+        </footer>
+
+        <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+        <script type="text/hyperscript">
+            on update_buttons
+                if #image_list is empty
+                    add @disabled to #btn_combine
+                else
+                    remove @disabled from #btn_combine
+                end
+
+                remove @disabled from <button#btn_up/>
+                remove @disabled from <button#btn_down/>
+
+                if the first <button#btn_up/> exists
+                    add @disabled to the first <button#btn_up/>
+                end
+                if the last <button#btn_down/> exists
+                    add @disabled to the last <button#btn_down/>
+                end
+            end
+
+            on perform_combine
+                -- This is going to get ugly
+
+                remove <canvas/>
+
+                set rows to <#image_list > .image_row/>
+                if rows is empty
+                    log "no images to process"
+                    exit
+                end
+
+                set imgs to []
+                repeat for row in rows
+                    set img to the first <img.local_img/> in row
+                    if img.naturalWidth > 0 and img.naturalHeight > 0
+                        append img to imgs
+                    end
+                end
+                if imgs is empty
+                    log "no *valid* images to process"
+                    exit
+                end
+
+                set largest_width to 0
+                set largest_height to 0
+                set smallest_width to Infinity
+                set smallest_height to Infinity
+
+                repeat for img in imgs
+                    set width to img.naturalWidth
+                    set height to img.naturalHeight
+
+                    set largest_width to Math.max(largest_width, width)
+                    set largest_height to Math.max(largest_height, height)
+                    set smallest_width to Math.min(smallest_width, width)
+                    set smallest_height to Math.min(smallest_height, height)
+                end
+
+                add @disabled to #btn_combine
+
+                log `smallest: ${smallest_width} ${smallest_height}`
+                log `largest: ${largest_width} ${largest_height}`
+
+                set size_to_larger to (<#size_larger:checked/> exists)
+                set direction_vert to (<#direction_vert:checked/> exists)
+
+                if direction_vert
+                    if size_to_larger
+                        combine_vertical(imgs, largest_width)
+                    else
+                        combine_vertical(imgs, smallest_width)
+                    end
+                else
+                    if size_to_larger
+                        combine_horizontal(imgs, largest_height)
+                    else
+                        combine_horizontal(imgs, smallest_height)
+                    end
+                end
+            end
+
+            def on_blob_made(blob)
+                make an <a/> called link
+                set its @href to URL.createObjectURL(blob)
+                set its @download to 'combined.png'
+                put link at the end of <body/>
+                call link.click()
+                remove link
+
+                send update_buttons to <body/>
+            end
+
+            def create_output_img(canvas)
+                canvas.toBlob(on_blob_made)
+            end
+
+            def combine_vertical(imgs, basis_width)
+                -- Calculate final height
+                set final_height to 0
+                repeat for img in imgs
+                    set final_height to final_height + Math.floor((basis_width / img.naturalWidth) * img.naturalHeight)
+                end
+
+                -- Create dummy canvas
+                make a <canvas/> called canvas
+                set its *display to 'none'
+                set its @width to basis_width
+                set its @height to final_height
+                set ctx to canvas.getContext('2d')
+                put it at the end of <body/>
+
+                -- Draw images
+                set y to 0
+                repeat for img in imgs
+                    set h to (basis_width / img.naturalWidth) * img.naturalHeight
+                    call ctx.drawImage(img, 0, Math.floor(y), basis_width, Math.floor(h))
+                    set y to y + h
+                end
+
+                create_output_img(canvas)
+            end
+
+            def combine_horizontal(imgs, basis_height)
+                -- Calculate final height
+                set final_width to 0
+                repeat for img in imgs
+                    set final_width to final_width + Math.floor((basis_height / img.naturalHeight) * img.naturalWidth)
+                end
+
+                -- Create dummy canvas
+                make a <canvas/> called canvas
+                set its *display to 'none'
+                set its @width to final_width
+                set its @height to basis_height
+                set ctx to canvas.getContext('2d')
+                put it at the end of <body/>
+
+                -- Draw images
+                set x to 0
+                repeat for img in imgs
+                    set w to Math.floor((basis_height / img.naturalHeight) * img.naturalWidth)
+                    call ctx.drawImage(img, Math.floor(x), 0, w, basis_height)
+                    set x to x + w
+                end
+
+                create_output_img(canvas)
+            end
+
+            -- Called when the image selection input is changed
+            def select_images(input)
+                -- Check if there were any files supplied
+                if input.files exists and input.files is not empty
+                    -- Loop through each of the files
+                    repeat for img_file in input.files
+                        -- Create the wrapper row for this image
+                        make a <div.image_row/> called img_row then put it at the end of #image_list
+
+                        -- Move up button
+                        make a <button#btn_up/>
+                        put '&uarr;' into it
+                        set its @_ to 'on click put the closest <div.image_row/> before the previous <div.image_row/> then send update_buttons to <body/>'
+                        put it into img_row
+
+                        -- Move down button
+                        make a <button#btn_down/>
+                        put '&darr;' into it
+                        set its @_ to 'on click put the closest <div.image_row/> after the next <div.image_row/> then send update_buttons to <body/>'
+                        put it at the end of img_row
+
+                        -- Delete button
+                        make a <button#btn_delete/> called btn_delete
+                        put '&cross;' into it
+                        set its @_ to 'on click remove the closest <div.image_row/> then send update_buttons to <body/>'
+                        put it at the end of img_row
+
+                        -- Create the image and add an onload event handler to
+                        -- clean up after ourselves.
+                        make an <img.local_img/> called img
+                        set data_src to URL.createObjectURL(img_file)
+                        set img's @src to data_src
+
+                        -- Wrap the image up to make handling it easier
+                        -- Pain.
+                        make a <div.img_wrapper/> then put img into it
+                        put it at the end of img_row
+
+                        -- Yeet
+                        send update_buttons to <body/>
+                    end
+                end
+            end
+        </script>
+    </body>
+</html>
