@@ -122,18 +122,27 @@
 
                     <label for="size_select">Sizing:</label>
                     <div id="size_select">
+                        <input type="radio" name="size_select" id="size_larger" checked/>
+                        <label for="size_larger">Size to largest</label>
+                        <br>
                         <input type="radio" name="size_select" id="size_smaller"/>
                         <label for="size_smaller">Size to smallest</label>
-                        <br>
-                        <input type="radio" name="size_select" id="size_larger"/>
-                        <label for="size_larger">Size to largest</label>
                     </div>
 
-                    <button id="btn_combine" _="on click send perform_combine to <body/>">Combine!</button>
+                    <label for="direction_select">Direction:</label>
+                    <div id="direction_select">
+                        <input type="radio" name="direction_select" id="direction_vert" checked/>
+                        <label for="direction_vert">Vertical</label>
+                        <br>
+                        <input type="radio" name="direction_select" id="direction_horiz"/>
+                        <label for="direction_horiz">Horizontal</label>
+                    </div>
+
+                    <button id="btn_combine" _="on click send perform_combine to <body/> add @disabled to me">Combine!</button>
 
                     <div id="image_list"></div>
 
-                    <div id="image_output" style="display: none;">
+                    <div id="image_output">
                         <div class="img_wrapper"></div>
                     </div>
                 </div>
@@ -170,6 +179,130 @@
 
             on perform_combine
                 -- This is going to get ugly
+
+                remove <canvas/>
+
+                set rows to <#image_list > .image_row/>
+                if rows is empty
+                    log "no images to process"
+                    exit
+                end
+
+                set imgs to []
+                repeat for row in rows
+                    set img to the first <img.local_img/> in row
+                    if img.naturalWidth > 0 and img.naturalHeight > 0
+                        append img to imgs
+                    end
+                end
+                if imgs is empty
+                    log "no *valid* images to process"
+                    exit
+                end
+
+                set largest_width to 0
+                set largest_height to 0
+                set smallest_width to Infinity
+                set smallest_height to Infinity
+
+                repeat for img in imgs
+                    set width to img.naturalWidth
+                    set height to img.naturalHeight
+
+                    set largest_width to Math.max(largest_width, width)
+                    set largest_height to Math.max(largest_height, height)
+                    set smallest_width to Math.min(smallest_width, width)
+                    set smallest_height to Math.min(smallest_height, height)
+                end
+
+                add @disabled to #btn_combine
+
+                log `smallest: ${smallest_width} ${smallest_height}`
+                log `largest: ${largest_width} ${largest_height}`
+
+                set size_to_larger to (<#size_larger:checked/> exists)
+                set direction_vert to (<#direction_vert:checked/> exists)
+
+                if direction_vert
+                    if size_to_larger
+                        combine_vertical(imgs, largest_width)
+                    else
+                        combine_vertical(imgs, smallest_width)
+                    end
+                else
+                    if size_to_larger
+                        combine_horizontal(imgs, largest_height)
+                    else
+                        combine_horizontal(imgs, smallest_height)
+                    end
+                end
+            end
+
+            def on_blob_made(blob)
+                make an <a/> called link
+                set its @href to URL.createObjectURL(blob)
+                set its @download to 'combined.png'
+                put link at the end of <body/>
+                call link.click()
+                remove link
+
+                send update_buttons to <body/>
+            end
+
+            def create_output_img(canvas)
+                canvas.toBlob(on_blob_made)
+            end
+
+            def combine_vertical(imgs, basis_width)
+                -- Calculate final height
+                set final_height to 0
+                repeat for img in imgs
+                    set final_height to final_height + Math.floor((basis_width / img.naturalWidth) * img.naturalHeight)
+                end
+
+                -- Create dummy canvas
+                make a <canvas/> called canvas
+                set its *display to 'none'
+                set its @width to basis_width
+                set its @height to final_height
+                set ctx to canvas.getContext('2d')
+                put it at the end of <body/>
+
+                -- Draw images
+                set y to 0
+                repeat for img in imgs
+                    set h to (basis_width / img.naturalWidth) * img.naturalHeight
+                    call ctx.drawImage(img, 0, Math.floor(y), basis_width, Math.floor(h))
+                    set y to y + h
+                end
+
+                create_output_img(canvas)
+            end
+
+            def combine_horizontal(imgs, basis_height)
+                -- Calculate final height
+                set final_width to 0
+                repeat for img in imgs
+                    set final_width to final_width + Math.floor((basis_height / img.naturalHeight) * img.naturalWidth)
+                end
+
+                -- Create dummy canvas
+                make a <canvas/> called canvas
+                set its *display to 'none'
+                set its @width to final_width
+                set its @height to basis_height
+                set ctx to canvas.getContext('2d')
+                put it at the end of <body/>
+
+                -- Draw images
+                set x to 0
+                repeat for img in imgs
+                    set w to Math.floor((basis_height / img.naturalHeight) * img.naturalWidth)
+                    call ctx.drawImage(img, Math.floor(x), 0, w, basis_height)
+                    set x to x + w
+                end
+
+                create_output_img(canvas)
             end
 
             -- Called when the image selection input is changed
@@ -203,7 +336,6 @@
                         -- clean up after ourselves.
                         make an <img.local_img/> called img
                         set data_src to URL.createObjectURL(img_file)
-                        set img's @_ to `on load call URL.revokeObjectURL("${data_src}")`
                         set img's @src to data_src
 
                         -- Wrap the image up to make handling it easier
