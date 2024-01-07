@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>ImgStack2</title>
+
+        <style>
+            html, body {
+                padding: 0;
+                margin: 0;
+                height: 100%;
+            }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            #content {
+                flex-grow: 1;
+            }
+
+            footer {
+                flex-shrink: 0;
+                padding: 1rem;
+                background-color: #EEEEEE;
+            }
+
+            footer a {
+                color: #5555FF;
+                text-decoration: none;
+            }
+
+            footer a:hover {
+                color: #0505CC;
+                text-decoration: underline;
+            }
+
+            .container {
+                width: 20rem;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            @media (min-width: 50rem) {
+                .container {
+                    width: 40rem;
+                }
+            }
+
+            @media (min-width: 80rem) {
+                .container {
+                    width: 60rem;
+                }
+            }
+
+            #options_box {
+                display: grid;
+                grid-template-columns: auto auto;
+                align-items: center;
+                border: 1px solid black;
+                padding: 1rem;
+            }
+
+            #options_box > label {
+                justify-self: end;
+                padding: 0.5rem;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="content">
+            <div class="container">
+                <h1>Hello</h1>
+                <div id="options_box">
+                    <label for="file_select">Select:</label>
+                    <input type="file" id="file_select" accept="image/*" multiple>
+                </div>
+            </div>
+        </div>
+        <footer style="flex-shrink: 0;">
+            <div class="container">
+                &copy; 2024
+                <a href="https://cjburkey.com" target="_blank" title="CJ's Website">CJ Burkey</a>
+                <br>
+                <a href="https://github.com/cjburkey01/img_stack_2" target="_blank" title="Link to this page's source code on GitHub">GitHub</a>
+            </div>
+        </footer>
+    </body>
+</html>
